@@ -1,0 +1,35 @@
+//---------------------------------------------------------------
+// Program lab_6a - Asemblery Laboratorium IS II rok
+//
+// To compile&link: gcc -o lab_6a lab_6a.c lab_6a_asm.s
+// To run:          ./lab_6a
+//
+//---------------------------------------------------------------
+
+#include <stdio.h>
+
+long long factc( unsigned int k )
+{
+	if( k <= 1 )
+		return 1;
+	else
+		return k * factc( k - 1 );
+}
+
+long long facta( unsigned int k );
+
+void main( void )
+{
+ int i;
+
+ for( i = 1; i <= 6; i++ )
+   printf( "FactC(%d) = %ld FactA = %ld\n", i, factc(i), facta(i) );
+}
+
+
+
+//Funkcja nie zmienia zawartości rejestrów
+//rdi,rsi,rdx,rcx,r8,r9-kolejne miejsca na argumenty do przekazywania
+
+//Jeśli chcemy działać na rejestrach to musimy je wcześniej zapamiętać, a później je przywrócić(PUSH i POP)
+//jak cos zwaraca to w rax (jak ma zwracać 128 to wtedy: rdx, rax) 

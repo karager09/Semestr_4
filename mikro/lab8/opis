@@ -1,0 +1,14 @@
+ Patrz pdf
+ 
+ 1. liczba argumentów (co najmniej jeden)
+ 2. wskaźniki do łańcuchów znaków (argumentów)
+ 3. 0 (NULL), raczej w celach kontrolnych
+ 4. zmienne środowiskowe,   nazwa zmiennej środowiskowej i jej wartość ( nie znamy ich liczby)
+ 5. 0  (skończyły się zmienne środowiskowe)
+ 6. powtórzone dane, ale w gorszej formie ( cała linia polecenia)
+ 
+ 
+ w wersji 32 bit tak samo, ale te wskaźniki mają po 4  bajty a nie po 8
+ 
+ 
+ 

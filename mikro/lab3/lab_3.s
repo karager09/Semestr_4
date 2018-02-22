@@ -1,0 +1,186 @@
+#----------------------------------------------------------------
+# Program LAB_3.S - Asemblery Laboratorium IS II rok
+#----------------------------------------------------------------
+#
+#  To compile: as -o lab_3.o lab_3.s
+#  To link:    ld -o lab_3 lab_3.o
+#  To run:     ./lab_3
+#
+#---------------------------------------------------------------- 
+
+	.equ	write_64,	1
+	.equ	exit_64,	60
+	.equ	stdout,	1
+
+	.equ	dig0,		'0'
+
+#----------------------------------------------------------------
+
+	.data
+
+table:					# table of items
+	.long	10,70,50,90,60,80,40,20,0,30,50
+count:					# count of items
+	.quad	( . - table ) >> 2	#różnica między adresami i dzielimy przez 4 (przesuwamy o 2)
+events:	
+	.quad	0
+item:	
+	.string	"Item "
+line_no:	
+	.string	"   "
+itemval:	
+	.string	" = "
+number:	
+	.string	"     \n"
+before:	
+	.string	"\nBefore:\n"
+after:	
+	.string	"\nAfter:\n"
+dataend:
+
+	.equ	item_len, before - item
+	.equ	bef_len, after - before
+	.equ	aft_len, dataend - after
+
+#----------------------------------------------------------------
+
+	.text
+	.global _start
+
+_start:
+	MOV	$write_64,%rax	# display message, wyświetlamy "before"
+	MOV	$stdout,%rdi
+	MOV	$before,%rsi
+	MOV	$bef_len,%rdx
+	SYSCALL
+
+	CALL	disp_table	# display content of table
+
+	CALL	do_something	# do something with table
+
+	MOV	$write_64,%rax	# display message, wyświetlamy "After"
+	MOV	$stdout,%rdi
+	MOV	$after,%rsi
+	MOV	$aft_len,%rdx
+	SYSCALL
+
+	CALL	disp_table	# display content of table
+
+	MOV	events,%rdi	# exit program
+	MOV	$exit_64,%rax
+	SYSCALL
+
+#----------------------------------------------------------------
+#
+#	Function:	do_something, sortowanie bąbelkowe
+#	Parameters:	none
+#
+
+	.type do_something,@function
+
+do_something:
+	MOV	count,%rdx		# outer loop counter
+	MOVQ	$0,events
+outer:		
+	DEC	%rdx
+	XOR	%rsi,%rsi		# data index
+	MOV	%rdx,%rcx		# inner loop counter
+inner:		
+	MOV	table(,%rsi,4),%eax
+	CMP	table+4(,%rsi,4),%eax
+	JBE	noswap
+	XCHG	table+4(,%rsi,4),%eax
+	MOV	%eax,table(,%rsi,4)
+	INCQ	events
+noswap:		
+	INC	%rsi			# next element
+	LOOP	inner			# { rcx--; if( rcx ) goto inner }
+	CMP	$1,%rdx
+	JNZ	outer
+
+	RET
+
+#----------------------------------------------------------------
+#
+#	Function:	disp_table
+#	Parameters:	none
+#
+
+	.type disp_table,@function	#wypisuje tablice
+
+disp_table:
+	XOR	%rsi,%rsi		# data index, rsi będize naszym licznikiem
+	MOV	count,%rcx		# data count, liczba elementów w tablicy
+
+disp_item:
+	MOV	table(,%rsi,4),%ebx	# get data,	przenieś 4 bajty z adresu table+rsi*4 i umieść ją w rejestrze ebx
+	CALL	make_string		# convert to string
+  
+	PUSH %rsi
+	PUSH	%rcx
+	
+	MOV	$write_64,%rax		# call write function
+	MOV	$stdout,%rdi
+	MOV	$item,%rsi		# używamy adres zmiennej item, ale na tyle dużo że pojawią się też znaki line_no i number
+	MOV	$item_len,%rdx
+	SYSCALL				#zawartość %rcx jest niszczona, ginie nam licznik pętli
+
+	POP 	%rcx
+	POP	%rsi
+	  
+	INC	%rsi			# next element, wzwiększamy indeks
+	LOOP	disp_item		# { rcx--; if( rcx ) goto disp_item }
+
+	RET				# return to main program
+
+#----------------------------------------------------------------(%esi to połówka %rsi)
+#
+#	Function:	make_string
+#	Parameters:	%esi - index of element
+#			%ebx - value of element
+#
+
+	.type make_string,@function
+
+make_string:
+	MOVL	$0x20202020,number	#modyfikuje bajty, zmienia je na 0x20, czyli 32- kod ASCII spacji- czyścimy bufor
+	MOVW	$0x2020,line_no
+	#dostaje dwie liczby, z rejestrów
+	MOV	%esi,%eax		# convert index of table element to string
+	MOV	$line_no + 2,%rdi	#rdi- adres gdzie ma być wynikowy ciąg znaków, $line_no - 3 spacje a zapisujemy od końca, więc wskazujemy na ostatnią spacje,
+	CALL	n2str
+
+	MOV	%ebx,%eax		# convert value of table element to string
+	MOV	$number + 4,%rdi	# $number- 5 spacji i \n, wiec przesuwamy o 4, zeby wskazywać na koniec
+	CALL	n2str
+
+	RET				# return to disp_table function
+
+#----------------------------------------------------------------
+#
+#	Function:	n2str
+#	Parameters:	%eax - value
+#			%rdi - address of last character
+#
+
+	.type n2str,@function		#pętla do - while
+n2str:
+	PUSH	%rbx		# save register on stack, wrzucamy do pamięci to co było wcześniej, żeby nie stracić danych
+	PUSH	%rdx		# save register on stack
+	MOV	$10,%ebx	# divisor in EBX, dividend in EAX, %ebx - dzielnik, czyli 10
+nextdig:			
+	XOR	%edx,%edx	# EDX = 0, 		dzielną mamy w eax, edx zerujemy(bo tam może być reszta z poprzedniego dzielenia, bardziej znacząca od dzielnej)
+	DIV	%ebx		# EDX:EAX div EBX,	niejawnie wiemy co jest dzielną, w edx otrzymujemy iloraz i resztę
+	ADD	$dig0,%dl	# convert remainder (in EDX) to character	w %edx mamy reszte(od 0 do 9 - więc w dl- długością odpowiada jednemu znakowi)
+	MOV	%dl,(%rdi)	# *(RDI) = character (decimal digit)	tam gdzie rdi			rdx:(32 +edx:(16+dx:(dh | dl)))
+	CMP	$0,%eax		# quotient in EAX 	sprawdzamy czy iloraz jest 0, jak tak to kończymy dzielenie
+	JZ	empty	
+	DEC	%rdi		# RDI-- tu ma być wpisany wynik jako string- wskazujemy na kolejne miejsce gdzie ma być zapisany wynik
+	JMP	nextdig		# skaczemy na początek pętli
+empty:		
+	POP	%rdx		# restore register from stack, pobieramy ze stosu, żeby wrócić do poprzeniego stanu
+	POP	%rbx		# restore register from stack, kolejność odwrotna musi być
+
+	RET			# return to make_string function
+
+#----------------------------------------------------------------
