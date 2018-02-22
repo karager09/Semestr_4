@@ -1,0 +1,9 @@
+	.text
+	.type isParity, @function
+	.globl isParity
+	
+isParity:
+	and $0x01,%dil
+	xor %rax,%rax
+	mov %dil,%al
+	ret
