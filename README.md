@@ -1,2 +1,4 @@
 # Semestr_4
-JAVA, assemblery
+Badania Operacyjne i Teoria Złożoności Obliczeniowej - JAVA, 
+
+Mikrokontrolery i cos tam - Assembler + C
